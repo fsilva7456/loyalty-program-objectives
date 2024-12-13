@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.services.openai_service import OpenAIService
 from app.config import Settings, get_settings
 from app.schemas.request import LoyaltyAnalysisRequest
-from app.schemas.response import LoyaltyAnalysisResponse
+from app.schemas.response import LoyaltyAnalysisResponse, ObjectiveWithRationale
+import json
 
 app = FastAPI(
     title="Loyalty Program Objectives API",
@@ -26,7 +27,7 @@ async def health_check():
 
 @app.post("/api/v1/analyze-objectives",
     response_model=LoyaltyAnalysisResponse,
-    description="Analyze and suggest loyalty program objectives based on input parameters")
+    description="Analyze and suggest loyalty program objectives based on company and competitor analysis")
 async def analyze_objectives(
     request: LoyaltyAnalysisRequest,
     settings: Settings = Depends(get_settings)
@@ -36,32 +37,49 @@ async def analyze_objectives(
         
         # Generate system prompt for loyalty program analysis
         system_prompt = (
-            "You are an expert in loyalty program strategy and customer retention. "
-            "Analyze the provided information and suggest specific, actionable objectives "
-            "that align with the business goals and customer segments. Consider factors like:"
+            "You are an expert in loyalty program strategy, customer retention, and competitive analysis. "
+            "Your task is to analyze the provided information about a company and its competitors to suggest "
+            "the top 5 most impactful loyalty program objectives. For each objective, provide a clear rationale "
+            "that explains how it addresses the company's specific needs and competitive position. Consider factors like:"
             "\n- Customer engagement and retention"
+            "\n- Competitive differentiation and market positioning"
             "\n- Revenue generation and profitability"
             "\n- Brand loyalty and advocacy"
-            "\n- Competitive differentiation"
+            "\n- Customer data and insights"
+            "\n\nProvide your response in the following JSON format:"
+            "\n{\"objectives\": [{\"objective\": \"objective text\", \"rationale\": \"rationale text\"}, ...]}"
         )
         
         # Process the query
         response = await openai_service.get_analysis(
             user_prompt=request.format_prompt(),
             system_prompt=system_prompt,
-            max_tokens=request.max_tokens or 1000,
+            max_tokens=request.max_tokens or 2000,
             temperature=request.temperature or 0.7
         )
         
+        # Parse the response
+        try:
+            parsed_response = json.loads(response)
+            objectives = [
+                ObjectiveWithRationale(**obj)
+                for obj in parsed_response["objectives"]
+            ]
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to parse AI response into required format: {str(e)}"
+            )
+        
         # Return structured response
         return LoyaltyAnalysisResponse(
+            company_name=request.company_name,
             industry=request.industry,
             business_type=request.business_type,
-            customer_segments=request.customer_segments,
-            objectives=response,
+            objectives=objectives,
             metadata={
                 "model": "gpt-4-turbo-preview",
-                "max_tokens": request.max_tokens or 1000,
+                "max_tokens": request.max_tokens or 2000,
                 "temperature": request.temperature or 0.7
             }
         )
