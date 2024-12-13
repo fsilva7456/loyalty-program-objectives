@@ -1,14 +1,15 @@
 # Loyalty Program Objectives API
 
-An AI-powered API for analyzing and suggesting loyalty program objectives using FastAPI and OpenAI.
+An AI-powered API for analyzing and suggesting loyalty program objectives using FastAPI and OpenAI. The API considers your company's context, customer segments, current challenges, and competitor analysis to provide strategic, actionable objectives.
 
 ## Features
 
 - FastAPI with async/await support
 - OpenAI GPT-4 Turbo integration
+- Competitive analysis integration
 - Industry-specific loyalty program analysis
-- Customizable objectives based on business context
-- Detailed response with actionable insights
+- Detailed rationale for each objective
+- Structured response format
 
 ## Setup
 
@@ -46,71 +47,124 @@ uvicorn app.main:app --reload
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-2. Make a test request:
+2. Example request:
 ```bash
 curl -X POST "http://localhost:8000/api/v1/analyze-objectives" \
      -H "Content-Type: application/json" \
      -d '{
+           "company_name": "WellnessMart",
            "industry": "retail",
            "business_type": "B2C",
-           "customer_segments": ["millennials", "frequent shoppers"],
-           "current_challenges": ["low repeat purchase rate"],
-           "business_goals": ["increase customer lifetime value"],
-           "max_tokens": 1000,
-           "temperature": 0.7
+           "customer_segments": [
+             "health-conscious millennials",
+             "fitness enthusiasts",
+             "organic food shoppers"
+           ],
+           "current_loyalty_program": "Basic points system: 1 point per dollar spent, 100 points = $1 discount",
+           "current_challenges": [
+             "Low engagement with current program",
+             "High competition from specialized health stores",
+             "Limited customer data utilization"
+           ],
+           "business_goals": [
+             "Increase customer lifetime value by 30%",
+             "Improve retention rate for first-time customers",
+             "Drive more frequent store visits"
+           ],
+           "competitors": [
+             {
+               "name": "HealthyChoice Market",
+               "loyalty_program_description": "Tiered program with health coaching rewards",
+               "strengths": [
+                 "Personal health coaching sessions",
+                 "Integration with fitness apps"
+               ],
+               "weaknesses": [
+                 "High threshold for meaningful rewards",
+                 "Limited personalization"
+               ]
+             },
+             {
+               "name": "VitaPlus",
+               "loyalty_program_description": "Points plus subscription model",
+               "strengths": [
+                 "Predictable recurring revenue",
+                 "Strong mobile app experience"
+               ],
+               "weaknesses": [
+                 "Complex program rules",
+                 "Limited flexibility for customers"
+               ]
+             }
+           ]
          }'
 ```
 
-## Project Structure
-
-```
-loyalty-program-objectives/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI application
-│   ├── config.py              # Configuration settings
-│   ├── services/
-│   │   ├── __init__.py
-│   │   └── openai_service.py  # OpenAI integration
-│   └── schemas/
-│       ├── __init__.py
-│       ├── request.py         # Request models
-│       └── response.py        # Response models
-├── requirements.txt
-├── .env.example
-└── README.md
+3. Example response:
+```json
+{
+  "company_name": "WellnessMart",
+  "industry": "retail",
+  "business_type": "B2C",
+  "objectives": [
+    {
+      "objective": "Implement a three-tiered wellness rewards program with experiential benefits, targeting 50% membership enrollment in 6 months",
+      "rationale": "Addresses the need for differentiation from competitors while leveraging our strength in holistic wellness. The tiered structure encourages progression and longer-term engagement, directly impacting customer lifetime value."
+    },
+    {
+      "objective": "Launch a mobile app with personalized health journey tracking, aiming for 40% adoption rate among loyalty members in first quarter",
+      "rationale": "Capitalizes on the competitor weakness in personalization while meeting our tech-savvy millennial segment's expectations. The app will also provide valuable customer data for further program optimization."
+    }
+  ],
+  "metadata": {
+    "model": "gpt-4-turbo-preview",
+    "max_tokens": 2000,
+    "temperature": 0.7
+  }
+}
 ```
 
 ## API Endpoints
 
 ### POST /api/v1/analyze-objectives
 
-Analyzes business context and suggests loyalty program objectives.
+Analyzes business context and competitor landscape to suggest loyalty program objectives.
 
-#### Request Body
-```json
+#### Request Body Schema
+```typescript
 {
-  "industry": "string",
-  "business_type": "string",
-  "customer_segments": ["string"],
-  "current_challenges": ["string"],
-  "business_goals": ["string"],
-  "max_tokens": 1000,
-  "temperature": 0.7
+  company_name: string
+  industry: string
+  business_type: string
+  customer_segments: string[]
+  current_loyalty_program?: string
+  current_challenges?: string[]
+  business_goals?: string[]
+  competitors: {
+    name: string
+    loyalty_program_description?: string
+    strengths?: string[]
+    weaknesses?: string[]
+  }[]
+  max_tokens?: number
+  temperature?: number
 }
 ```
 
-#### Response
-```json
+#### Response Schema
+```typescript
 {
-  "industry": "string",
-  "business_type": "string",
-  "customer_segments": ["string"],
-  "objectives": "string",
-  "metadata": {
-    "model": "string",
-    "max_tokens": 0,
-    "temperature": 0
+  company_name: string
+  industry: string
+  business_type: string
+  objectives: {
+    objective: string
+    rationale: string
+  }[]
+  metadata: {
+    model: string
+    max_tokens: number
+    temperature: number
   }
 }
 ```
